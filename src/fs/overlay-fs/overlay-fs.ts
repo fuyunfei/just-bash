@@ -59,7 +59,12 @@ interface MemorySymlinkEntry {
   mtime: Date;
 }
 
-type MemoryEntry = MemoryFileEntry | MemoryDirEntry | MemorySymlinkEntry;
+export type MemoryEntry = MemoryFileEntry | MemoryDirEntry | MemorySymlinkEntry;
+
+export interface FsSnapshot {
+  memory: Map<string, MemoryEntry>;
+  deleted: Set<string>;
+}
 
 export interface OverlayFsOptions {
   /**
@@ -1401,6 +1406,99 @@ export class OverlayFs implements IFileSystem {
         mode: stat.mode,
         mtime,
       });
+    }
+  }
+
+  /** Return a list of overlay changes (files created/modified/deleted in memory). */
+  getOverlayChanges(): Array<{
+    path: string;
+    type: "created" | "modified" | "deleted";
+    content?: string;
+  }> {
+    const changes: Array<{
+      path: string;
+      type: "created" | "modified" | "deleted";
+      content?: string;
+    }> = [];
+
+    // Files/dirs in the memory layer
+    for (const [path, entry] of this.memory) {
+      if (entry.type === "file") {
+        changes.push({
+          path,
+          type: "created",
+          content: new TextDecoder().decode(entry.content),
+        });
+      }
+      // Skip directories — only report files
+    }
+
+    // Deleted paths
+    for (const path of this.deleted) {
+      changes.push({ path, type: "deleted" });
+    }
+
+    return changes;
+  }
+
+  /** Deep-clone internal state for checkpoint. */
+  snapshot(): FsSnapshot {
+    const memory = new Map<string, MemoryEntry>();
+    for (const [key, entry] of this.memory) {
+      if (entry.type === "file") {
+        memory.set(key, {
+          type: "file",
+          content: entry.content.slice(),
+          mode: entry.mode,
+          mtime: new Date(entry.mtime.getTime()),
+        });
+      } else if (entry.type === "directory") {
+        memory.set(key, {
+          type: "directory",
+          mode: entry.mode,
+          mtime: new Date(entry.mtime.getTime()),
+        });
+      } else {
+        memory.set(key, {
+          type: "symlink",
+          target: entry.target,
+          mode: entry.mode,
+          mtime: new Date(entry.mtime.getTime()),
+        });
+      }
+    }
+    return { memory, deleted: new Set(this.deleted) };
+  }
+
+  /** Replace internal state from a previous snapshot. */
+  restore(snap: FsSnapshot): void {
+    this.memory.clear();
+    for (const [key, entry] of snap.memory) {
+      if (entry.type === "file") {
+        this.memory.set(key, {
+          type: "file",
+          content: entry.content.slice(),
+          mode: entry.mode,
+          mtime: new Date(entry.mtime.getTime()),
+        });
+      } else if (entry.type === "directory") {
+        this.memory.set(key, {
+          type: "directory",
+          mode: entry.mode,
+          mtime: new Date(entry.mtime.getTime()),
+        });
+      } else {
+        this.memory.set(key, {
+          type: "symlink",
+          target: entry.target,
+          mode: entry.mode,
+          mtime: new Date(entry.mtime.getTime()),
+        });
+      }
+    }
+    this.deleted.clear();
+    for (const path of snap.deleted) {
+      this.deleted.add(path);
     }
   }
 }
