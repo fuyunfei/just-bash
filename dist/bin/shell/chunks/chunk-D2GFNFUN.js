@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+import{a as h,b as u}from"./chunk-GTNBSMZR.js";var k={name:"readlink",summary:"print resolved symbolic links or canonical file names",usage:"readlink [OPTIONS] FILE...",options:["-f      canonicalize by following every symlink in every component of the given name recursively","    --help display this help and exit"]},g={name:"readlink",async execute(i,a){if(u(i))return h(k);let r=!1,n=0;for(;n<i.length&&i[n].startsWith("-");){let t=i[n];if(t==="-f"||t==="--canonicalize")r=!0,n++;else if(t==="--"){n++;break}else return{stdout:"",stderr:`readlink: invalid option -- '${t.slice(1)}'
+`,exitCode:1}}let d=i.slice(n);if(d.length===0)return{stdout:"",stderr:`readlink: missing operand
+`,exitCode:1};let l="",f=!1;for(let t of d){let s=a.fs.resolvePath(a.cwd,t);try{if(r){let e=s,c=new Set;for(;!c.has(e);){c.add(e);try{let o=await a.fs.readlink(e);if(o.startsWith("/"))e=o;else{let p=e.substring(0,e.lastIndexOf("/"))||"/";e=a.fs.resolvePath(p,o)}}catch{break}}l+=`${e}
+`}else{let e=await a.fs.readlink(s);l+=`${e}
+`}}catch{r?l+=`${s}
+`:f=!0}}return{stdout:l,stderr:"",exitCode:f?1:0}}},y={name:"readlink",flags:[{flag:"-f",type:"boolean"},{flag:"-e",type:"boolean"}],needsArgs:!0};export{g as a,y as b};

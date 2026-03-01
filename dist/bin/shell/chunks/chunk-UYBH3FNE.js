@@ -1,0 +1,2 @@
+#!/usr/bin/env node
+var n=new Set(["__proto__","constructor","prototype"]),f=new Set([...n,"__defineGetter__","__defineSetter__","__lookupGetter__","__lookupSetter__","hasOwnProperty","isPrototypeOf","propertyIsEnumerable","toLocaleString","toString","valueOf"]);function o(e){return!n.has(e)}function u(e,t,r){o(t)&&(e[t]=r)}function c(e,t){return Object.hasOwn(e,t)}function s(e){return Object.assign(Object.create(null),e)}function i(...e){return Object.assign(Object.create(null),...e)}export{o as a,u as b,c,s as d,i as e};
